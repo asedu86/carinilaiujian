@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pencarian Nilai Ujian Siswa</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #f4f6f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 480px;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .form-section {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus {
+            border-color: #007bff;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .btn-keluar {
+            background-color: #d9534f;
+            margin-top: 15px;
+        }
+        .btn-keluar:hover {
+            background-color: #c9302c;
+        }
+        .result-container {
+            margin-top: 15px;
+            display: none;
+        }
+        .result-card {
+            padding: 18px;
+            border-radius: 8px;
+            background-color: #f8fbff;
+            border: 1px solid #d0e3ff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+            margin-bottom: 12px;
+        }
+        .result-item {
+            margin-bottom: 8px;
+            font-size: 15px;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed #eee;
+            padding-bottom: 6px;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .result-item strong {
+            color: #444;
+        }
+        .result-item span {
+            color: #111;
+            font-weight: 600;
+        }
+        .error-message {
+            margin-top: 20px;
+            padding: 12px;
+            background-color: #ffe6e6;
+            color: #d9534f;
+            border-radius: 6px;
+            display: none;
+            text-align: center;
+        }
+        .loading {
+            text-align: center;
+            display: none;
+            margin-top: 15px;
+            color: #666;
+        }
+        .info-count {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 12px;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 id="appTitle">Cari Data Nilai Ujian</h2>
+    
+    <!-- Bagian Form Input (Akan disembunyikan saat hasil muncul) -->
+    <div id="formSection" class="form-section">
+        <div class="form-group">
+            <label for="nisnInput">Masukkan NISN:</label>
+            <input type="text" id="nisnInput" placeholder="Contoh: 0088401493" autofocus>
+        </div>
+        <button onclick="cariData()">Cari Data</button>
+    </div>
+
+    <div id="loading" class="loading">Mencari data...</div>
+
+    <!-- Bagian Hasil Pencarian -->
+    <div id="resultContainer" class="result-container">
+        <div id="infoCount" class="info-count"></div>
+        <div id="cardsList"></div>
+        <button class="btn-keluar" onclick="resetForm()">Keluar / Cari Lagi</button>
+    </div>
+
+    <div id="errorMessage" class="error-message">Data tidak ditemukan!</div>
+</div>
+
+<script>
+    // Ganti dengan Web App URL dari Apps Script Anda
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycby4bWKPtTxjZ9AdqVieqAkZIpl-rMiLIvPEJD-lccMr4vrpsK3Z_c1nrx7LKq1hZoCK/exec';
+
+    async function cariData() {
+        const inputNisn = document.getElementById('nisnInput').value.trim();
+        const formSection = document.getElementById('formSection');
+        const resultContainer = document.getElementById('resultContainer');
+        const cardsList = document.getElementById('cardsList');
+        const infoCount = document.getElementById('infoCount');
+        const errorMessage = document.getElementById('errorMessage');
+        const loading = document.getElementById('loading');
+        const appTitle = document.getElementById('appTitle');
+
+        errorMessage.style.display = 'none';
+        cardsList.innerHTML = '';
+
+        if (!inputNisn) {
+            alert('Silakan masukkan NISN terlebih dahulu.');
+            return;
+        }
+
+        loading.style.display = 'block';
+
+        try {
+            const response = await fetch(`${WEB_APP_URL}?nisn=${encodeURIComponent(inputNisn)}`);
+            const data = await response.json();
+
+            loading.style.display = 'none';
+
+            if (data.found && data.dataList.length > 0) {
+                // Sembunyikan form input NISN dan ganti judul
+                formSection.style.display = 'none';
+                appTitle.innerText = "Hasil Pencarian Nilai";
+                
+                infoCount.innerText = `Ditemukan ${data.dataList.length} data untuk NISN: ${inputNisn}`;
+                
+                data.dataList.forEach((item, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'result-card';
+                    card.innerHTML = `
+                        ${data.dataList.length > 1 ? `<div class="result-item"><strong>Data ke-</strong> <span>${index + 1}</span></div>` : ''}
+                        <div class="result-item"><strong>NAMA</strong> <span>${item.nama}</span></div>
+                        <div class="result-item"><strong>KELAS</strong> <span>${item.kelas}</span></div>
+                        <div class="result-item"><strong>NISN</strong> <span>${item.nisn}</span></div>
+                        <div class="result-item"><strong>NILAI</strong> <span>${item.nilai}</span></div>
+                        <div class="result-item"><strong>KETERANGAN</strong> <span>${item.keterangan}</span></div>
+                    `;
+                    cardsList.appendChild(card);
+                });
+
+                resultContainer.style.display = 'block';
+            } else {
+                errorMessage.innerText = 'Data NISN tidak ditemukan  (Anda belum mengikuti ujian) ! ' ;
+                errorMessage.style.display = 'block';
+            }
+
+        } catch (error) {
+            console.error(error);
+            loading.style.display = 'none';
+            errorMessage.innerText = 'Terjadi kesalahan saat menghubungkan ke server.';
+            errorMessage.style.display = 'block';
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('nisnInput').value = '';
+        document.getElementById('resultContainer').style.display = 'none';
+        document.getElementById('formSection').style.display = 'block';
+        document.getElementById('errorMessage').style.display = 'none';
+        document.getElementById('appTitle').innerText = "Cari Data Nilai Ujian";
+        document.getElementById('nisnInput').focus();
+    }
+
+    document.getElementById('nisnInput').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            cariData();
+        }
+    });
+</script>
+
+</body>
+</html>
